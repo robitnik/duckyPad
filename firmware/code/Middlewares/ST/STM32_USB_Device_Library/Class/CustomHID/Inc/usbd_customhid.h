@@ -103,7 +103,7 @@ typedef struct _USBD_CUSTOM_HID_Itf
 
 typedef struct
 {
-  uint8_t              Report_buf[USBD_CUSTOMHID_OUTREPORT_BUF_SIZE];
+  uint8_t              Report_buf[USBD_CUSTOMHID_OUTREPORT_BUF_SIZE+1];
   uint32_t             Protocol;   
   uint32_t             IdleState;  
   uint32_t             AltSetting;

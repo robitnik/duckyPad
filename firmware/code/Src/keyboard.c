@@ -285,7 +285,7 @@ uint8_t kb_buf[KB_BUF_SIZE];
 void keyboard_release_all(void)
 {
   memset(kb_buf, 0, KB_BUF_SIZE);
-  kb_buf[0] = 1;
+  kb_buf[0] = 0x01;
   vTaskSuspendAll();USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, kb_buf, KB_BUF_SIZE);xTaskResumeAll();
 }
 

@@ -65,6 +65,7 @@ lul\my_tasks.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h
 lul\my_tasks.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h
 lul\my_tasks.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
 lul\my_tasks.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
+lul\my_tasks.o: ../Inc/usbd_custom_hid_if.h
 lul\my_tasks.o: ../Inc/ssd1306.h
 lul\my_tasks.o: ../Inc/fonts.h
 lul\my_tasks.o: ../Inc/fonts.h

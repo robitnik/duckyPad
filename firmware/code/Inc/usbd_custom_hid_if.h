@@ -78,6 +78,7 @@
   */
 
 /* USER CODE BEGIN EXPORTED_DEFINES */
+extern volatile uint8_t keypad_state;
 
 /* USER CODE END EXPORTED_DEFINES */
 

@@ -4,6 +4,7 @@
 #include "my_tasks.h"
 #include "shared.h"
 #include "usbd_customhid.h"
+#include "usbd_custom_hid_if.h"
 #include "ssd1306.h"
 #include "fonts.h"
 #include "neopixel.h"
@@ -964,8 +965,51 @@ void keypress_task_start(void const * argument)
   change_bg();
   service_all();
   keyboard_release_all();
+  
   for(;;)
   {
+
+    // testing key-states
+    // CAPSLOCK
+		if( (keypad_state & 0x02) == 0x02 ) {
+				 p_cache.individual_key_color[0][0] = 255;
+				 p_cache.individual_key_color[0][1] = 0;
+				 p_cache.individual_key_color[0][2] = 0;
+		}
+		else{
+				p_cache.individual_key_color[0][0] = 0;
+				p_cache.individual_key_color[0][1] = 255;
+				p_cache.individual_key_color[0][2] = 0;  
+		}
+        // NUMLOCK
+		if( (keypad_state & 0x01) == 0x01 ) {
+				 p_cache.individual_key_color[1][0] = 255;
+				 p_cache.individual_key_color[1][1] = 0;
+				 p_cache.individual_key_color[1][2] = 0;
+		}
+		else{
+				p_cache.individual_key_color[1][0] = 0;
+				p_cache.individual_key_color[1][1] = 255;
+				p_cache.individual_key_color[1][2] = 0;  
+		}
+        // SCROLLLOCK
+		if( (keypad_state & 0x04) == 0x04 ) {
+				 p_cache.individual_key_color[2][0] = 255;
+				 p_cache.individual_key_color[2][1] = 0;
+				 p_cache.individual_key_color[2][2] = 0;
+		}
+		else{
+				p_cache.individual_key_color[2][0] = 0;
+				p_cache.individual_key_color[2][1] = 255;
+				p_cache.individual_key_color[2][2] = 0;  
+		}
+		// update key colour
+		keydown_anime_start(0);
+		keydown_anime_end(0);
+    keydown_anime_start(1);
+		keydown_anime_end(1);
+    keydown_anime_start(2);
+		keydown_anime_end(2);
     for (int i = 0; i < KEY_COUNT; ++i)
     {
       if(is_pressed(&button_status[i]))
@@ -978,7 +1022,8 @@ void keypress_task_start(void const * argument)
           restore_profile(p_cache.current_profile, 0, 0);
           is_sleeping = 0;
           goto key_task_end;
-        }
+        }        
+
         if(i <= KEY_14)
         {
           keydown_anime_start(i);
@@ -1037,7 +1082,7 @@ void keypress_task_start(void const * argument)
         keydown_anime_end(i);
       }
       key_task_end:
-      service_press(&button_status[i]);
+      service_press(&button_status[i]);  
     } 
     osDelay(16);
   }

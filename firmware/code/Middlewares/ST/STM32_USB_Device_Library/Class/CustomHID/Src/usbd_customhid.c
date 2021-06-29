@@ -246,6 +246,19 @@ __ALIGN_BEGIN static uint8_t HID_MOUSE_ReportDesc[USBD_CUSTOM_HID_REPORT_DESC_SI
   0x19, 0x00,        //   Usage Minimum (0x00)
   0x29, 0x73,        //   Usage Maximum (0x73) originally 65, 73 supports F13 - F24
   0x81, 0x00,        //   Input (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+  	/* LEDs */ 																															
+	0x95, 0x01,	/*		Report Count (1), */																	
+	0x75, 0x08,	/*		Report Size (8), */																		
+	0x81, 0x01,	/*		Input (Constant),  					;Reserved byte */					
+	0x95, 0x05,	/*		Report Count (5), */																	
+	0x75, 0x01,	/*		Report Size (1), */																		
+	0x05, 0x08,	/*		Usage Page (Page# for LEDs), */												
+	0x19, 0x01,	/*		Usage Minimum (1), */																	
+	0x29, 0x05,	/*		Usage Maximum (5), */																	
+	0x91, 0x02,	/*		Output (Data, Variable, Absolute), 	;LED report */		
+	0x95, 0x01,	/*		Report Count (1), */																	
+	0x75, 0x03,	/*		Report Size (3), */																		
+	0x91, 0x01,	/*		Output (Constant),					;LED report padding */		
   0xC0,              // End Collection
   // Report ID 2: Media Keys
   0x05, 0x0C,        // Usage Page (Consumer)
@@ -347,6 +360,9 @@ __ALIGN_BEGIN static uint8_t HID_MOUSE_ReportDesc[USBD_CUSTOM_HID_REPORT_DESC_SI
 static uint8_t  USBD_CUSTOM_HID_Init (USBD_HandleTypeDef *pdev, 
                                uint8_t cfgidx)
 {
+  printf("USBD_CUSTOM_HID_Init %d\n", cfgidx);
+  uint8_t ret = 0;
+  USBD_CUSTOM_HID_HandleTypeDef     *hhid;
   /* Open EP IN */
   USBD_LL_OpenEP(pdev,
                  CUSTOM_HID_EPIN_ADDR,
@@ -360,7 +376,27 @@ static uint8_t  USBD_CUSTOM_HID_Init (USBD_HandleTypeDef *pdev,
                  CUSTOM_HID_EPOUT_SIZE);
   
   pdev->pClassData = USBD_malloc(sizeof (USBD_CUSTOM_HID_HandleTypeDef));
-  USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR, hid_rx_buf, HID_RX_BUF_SIZE);
+
+  if(pdev->pClassData == NULL)
+  {
+    ret = 1; 
+  }
+  else
+  {
+    hhid = (USBD_CUSTOM_HID_HandleTypeDef*) pdev->pClassData;
+      
+    hhid->state = CUSTOM_HID_IDLE;
+    ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->Init();
+
+    // CHANGES
+    //USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR, hid_rx_buf, HID_RX_BUF_SIZE);
+
+          /* Prepare Out endpoint to receive 1st packet */ 
+    USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR, hhid->Report_buf, 
+                           USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
+  }
+
+  
   return 0;
 }
 
@@ -374,6 +410,7 @@ static uint8_t  USBD_CUSTOM_HID_Init (USBD_HandleTypeDef *pdev,
 static uint8_t  USBD_CUSTOM_HID_DeInit (USBD_HandleTypeDef *pdev, 
                                  uint8_t cfgidx)
 {
+  printf("USBD_CUSTOM_HID_DeInit %d\n", cfgidx);
   /* Close CUSTOM_HID EP IN */
   USBD_LL_CloseEP(pdev,
                   CUSTOM_HID_EPIN_ADDR);
@@ -402,6 +439,7 @@ static uint8_t  USBD_CUSTOM_HID_DeInit (USBD_HandleTypeDef *pdev,
 static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev, 
                                 USBD_SetupReqTypedef *req)
 {
+  printf("USBD_CUSTOM_HID_Setup\n");
   uint16_t len = 0;
   uint8_t  *pbuf = NULL;
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
@@ -451,8 +489,9 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
       if( req->wValue >> 8 == CUSTOM_HID_REPORT_DESC)
       {
         len = MIN(USBD_CUSTOM_HID_REPORT_DESC_SIZE , req->wLength);
-        pbuf = HID_MOUSE_ReportDesc;
-        // pbuf =  ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->pReport;
+        // CHANGES HERE
+        // pbuf = HID_MOUSE_ReportDesc;
+        pbuf =  ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->pReport;
       }
       else if( req->wValue >> 8 == CUSTOM_HID_DESCRIPTOR_TYPE)
       {
@@ -491,6 +530,7 @@ uint8_t USBD_CUSTOM_HID_SendReport     (USBD_HandleTypeDef  *pdev,
                                  uint8_t *report,
                                  uint16_t len)
 {
+  printf("USBD_CUSTOM_HID_SendReport %d\n", &report);
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
   
   if (pdev->dev_state == USBD_STATE_CONFIGURED )
@@ -530,7 +570,7 @@ static uint8_t  *USBD_CUSTOM_HID_GetCfgDesc (uint16_t *length)
 static uint8_t  USBD_CUSTOM_HID_DataIn (USBD_HandleTypeDef *pdev, 
                               uint8_t epnum)
 {
-  
+  printf("USBD_CUSTOM_HID_DataIn %d\n", epnum);
   /* Ensure that the FIFO is empty before a new transfer, this condition could 
   be caused by  a new transfer before the end of the previous transfer */
   ((USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassData)->state = CUSTOM_HID_IDLE;
@@ -548,8 +588,24 @@ static uint8_t  USBD_CUSTOM_HID_DataIn (USBD_HandleTypeDef *pdev,
 static uint8_t  USBD_CUSTOM_HID_DataOut (USBD_HandleTypeDef *pdev, 
                               uint8_t epnum)
 {
-  HAL_PCD_EP_Receive(pdev->pData, CUSTOM_HID_EPOUT_ADDR, hid_rx_buf, HID_RX_BUF_SIZE);
-  hid_rx_has_unprocessed_data = 1;
+  printf("USBD_CUSTOM_HID_DataOut %d\n", epnum);
+  USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;  
+
+  printf("hhid->Report_buf[0] %d\n", hhid->Report_buf[0]);
+  printf("hhid->Report_buf[1] %d\n", hhid->Report_buf[1]);
+  if(hhid->Report_buf[0] == 0x01) {
+    ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf[0], hhid->Report_buf[1]);
+      USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR , hhid->Report_buf, 
+                         USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
+  }
+  else {
+    HAL_PCD_EP_Receive(pdev->pData, CUSTOM_HID_EPOUT_ADDR, hhid->Report_buf, HID_RX_BUF_SIZE);
+    for (size_t i = 0; i < HID_RX_BUF_SIZE; i++)
+    {
+      hid_rx_buf[i] = hhid->Report_buf[i];
+    }
+    hid_rx_has_unprocessed_data = 1;
+  }
   return USBD_OK;
 }
 
@@ -561,6 +617,7 @@ static uint8_t  USBD_CUSTOM_HID_DataOut (USBD_HandleTypeDef *pdev,
   */
 uint8_t USBD_CUSTOM_HID_EP0_RxReady(USBD_HandleTypeDef *pdev)
 {
+  printf("USBD_CUSTOM_HID_EP0_RxReady\n");
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;  
 
   if (hhid->IsReportAvailable == 1)
